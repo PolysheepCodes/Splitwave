@@ -7,3 +7,6 @@ bench/ort/
 __pycache__/
 .venv/
 .DS_Store
+public/ort/
+web/test/golden/
+web/test/vectors/

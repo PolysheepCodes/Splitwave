@@ -1,0 +1,77 @@
+:root {
+  --bg: #0f1117; --card: #171a23; --card2: #1f2330; --line: #2b3040; --text: #eceef4; --muted: #9aa1b5;
+  --accent: #6ee7d8; --accent2: #a78bfa; --err: #f87171; --warn: #fbbf24; --radius: 14px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root { --bg: #f5f6fa; --card: #ffffff; --card2: #f0f2f7; --line: #dfe2ea; --text: #161922; --muted: #5f6678;
+          --accent: #0f9b8e; --accent2: #7c3aed; color-scheme: light; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+header h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+header p { margin: 0 0 18px; color: var(--muted); max-width: 60ch; }
+.wave { width: 34px; height: 22px; display: inline-block;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 22'><g fill='black'><rect x='0' y='8' width='3' height='6' rx='1.5'/><rect x='5' y='4' width='3' height='14' rx='1.5'/><rect x='10' y='0' width='3' height='22' rx='1.5'/><rect x='15' y='6' width='3' height='10' rx='1.5'/><rect x='20' y='2' width='3' height='18' rx='1.5'/><rect x='25' y='7' width='3' height='8' rx='1.5'/><rect x='30' y='9' width='3' height='4' rx='1.5'/></g></svg>") center/contain no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 22'><g fill='black'><rect x='0' y='8' width='3' height='6' rx='1.5'/><rect x='5' y='4' width='3' height='14' rx='1.5'/><rect x='10' y='0' width='3' height='22' rx='1.5'/><rect x='15' y='6' width='3' height='10' rx='1.5'/><rect x='20' y='2' width='3' height='18' rx='1.5'/><rect x='25' y='7' width='3' height='8' rx='1.5'/><rect x='30' y='9' width='3' height='4' rx='1.5'/></g></svg>") center/contain no-repeat; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
+.hidden { display: none !important; }
+.note { border-radius: var(--radius); padding: 10px 14px; margin-bottom: 14px; background: var(--card2); border: 1px solid var(--line); color: var(--muted); }
+.note.warn { border-color: var(--warn); color: var(--text); }
+.note.err { border-color: var(--err); color: var(--text); }
+.muted { color: var(--muted); } .small { font-size: 13px; } .mono { font-variant-numeric: tabular-nums; }
+#drop { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 30px 16px; cursor: pointer;
+  border: 2px dashed var(--line); border-radius: var(--radius); text-align: center; transition: .15s; }
+#drop:hover, #drop.over, #drop:focus-visible { border-color: var(--accent); outline: none;
+  background: color-mix(in srgb, var(--accent) 7%, transparent); }
+#drop .big { font-size: 18px; font-weight: 600; word-break: break-word; }
+#drop .small { color: var(--muted); font-size: 13px; }
+#drop.has .big { color: var(--accent); }
+fieldset { border: 0; padding: 0; margin: 16px 0 10px; display: grid; gap: 8px; }
+legend { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; padding: 0; }
+.preset { display: grid; grid-template-columns: auto 1fr auto; column-gap: 10px; align-items: center; cursor: pointer;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card2); }
+.preset:has(input:checked) { border-color: var(--accent); }
+.preset:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+.preset input { grid-row: span 2; accent-color: var(--accent); }
+.ptitle { font-weight: 600; }
+.pdesc { grid-column: 2; color: var(--muted); font-size: 13px; }
+.pdesc b { color: var(--text); font-weight: 500; }
+.pstate { grid-row: 1 / span 2; grid-column: 3; font-size: 12px; color: var(--accent); }
+.check { display: flex; gap: 8px; align-items: center; margin: 4px 0 14px; color: var(--muted); }
+.check input { accent-color: var(--accent); }
+button { font: inherit; color: var(--text); background: var(--card2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 9px 16px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.primary { background: var(--accent); color: #062421; border-color: transparent; font-weight: 600; }
+button.round { width: 40px; height: 40px; padding: 0; border-radius: 50%; flex: none; }
+.row { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.row.end { justify-content: flex-end; margin-top: 12px; }
+#seek { flex: 1; accent-color: var(--accent); }
+#stages { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 10px; }
+#stages li { display: grid; gap: 4px; }
+#stages .label { display: flex; justify-content: space-between; font-size: 14px; }
+#stages li.wait { color: var(--muted); }
+.bar { height: 6px; border-radius: 3px; background: var(--card2); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s; }
+#stems { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+#stems li { display: grid; grid-template-columns: 120px 1fr auto; gap: 12px; align-items: center;
+  background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+#stems .name { font-weight: 600; }
+#stems canvas { width: 100%; height: 40px; display: block; }
+#stems .btns { display: flex; gap: 6px; }
+#stems .btns button { padding: 5px 10px; font-size: 13px; }
+#stems button.on { border-color: var(--accent); color: var(--accent); }
+#stems li.silent canvas { opacity: .3; }
+footer { margin-top: 28px; color: var(--muted); font-size: 12px; }
+footer a { color: inherit; }
+@media (max-width: 560px) {
+  #stems li { grid-template-columns: 1fr auto; }
+  #stems canvas { grid-column: 1 / -1; grid-row: 2; }
+}
+.resulthead { margin-bottom: 12px; }
+#workNote { margin: 0; }

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Splitwave</title>
+  <meta name="description" content="Split a song into vocals, instrumental, lead and backing vocals, right in your browser.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/src/ui/style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1><span class="wave" aria-hidden="true"></span>Splitwave</h1>
+      <p>Split a song into vocals and instrumental, then the vocals into lead and backing. It all runs on your
+        own computer: your music is never uploaded.</p>
+    </header>
+
+    <div id="device" class="note"></div>
+
+    <section id="pick" class="card">
+      <label id="drop" tabindex="0">
+        <input id="file" type="file" accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg,.opus,.aac" hidden>
+        <span class="big" id="dropBig">Drop a song here</span>
+        <span class="small" id="dropSmall">or click to choose a file · mp3, wav, flac, m4a, ogg</span>
+      </label>
+
+      <fieldset id="presets">
+        <legend>Quality</legend>
+        <label class="preset">
+          <input type="radio" name="preset" value="fast">
+          <span class="ptitle">Fast</span>
+          <span class="pdesc">MDX-Net models · <b id="fastSize">120 MB</b> download, once · works in any modern browser</span>
+          <span class="pstate" id="fastState"></span>
+        </label>
+        <label class="preset">
+          <input type="radio" name="preset" value="best" checked>
+          <span class="ptitle">Best</span>
+          <span class="pdesc">RoFormer models · <b id="bestSize">790 MB</b> download, once · needs WebGPU · the cleanest separation</span>
+          <span class="pstate" id="bestState"></span>
+        </label>
+      </fieldset>
+
+      <label class="check"><input type="checkbox" id="karaoke" checked> Also split the vocals into lead and backing vocals</label>
+
+      <button id="go" class="primary" disabled>Split</button>
+    </section>
+
+    <section id="work" class="card hidden" aria-live="polite">
+      <div class="row"><b id="workTitle">Working…</b><span id="clock" class="muted mono"></span></div>
+      <ol id="stages"></ol>
+      <div class="row">
+        <p class="muted small" id="workNote">Keep this tab open while it works.</p>
+        <button id="cancel">Cancel</button>
+      </div>
+    </section>
+
+    <section id="result" class="card hidden">
+      <div class="row resulthead"><b id="resultTitle"></b><span id="resultInfo" class="muted small"></span></div>
+      <div class="row">
+        <button id="play" class="round" aria-label="Play">▶</button>
+        <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Position">
+        <span id="time" class="muted mono">0:00 / 0:00</span>
+      </div>
+      <ul id="stems"></ul>
+      <div class="row end">
+        <button id="again">Split another song</button>
+        <button id="zip" class="primary">Download all (.zip)</button>
+      </div>
+    </section>
+
+    <div id="error" class="note err hidden" role="alert"></div>
+
+    <footer>
+      <p>Models: BS-RoFormer by viperx, Mel-Band RoFormer karaoke by aufr33 &amp; viperx, MDX-Net by the UVR team.
+        Separation runs with <a href="https://onnxruntime.ai/" target="_blank" rel="noopener">ONNX Runtime Web</a>.</p>
+    </footer>
+  </main>
+  <script type="module" src="/src/ui/main.ts"></script>
+</body>
+</html>

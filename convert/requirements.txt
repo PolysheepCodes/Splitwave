@@ -1,0 +1,8 @@
+torch
+audio-separator
+onnx
+onnxruntime
+librosa
+pyyaml
+einops
+numpy

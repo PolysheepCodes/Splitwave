@@ -6,3 +6,4 @@ librosa
 pyyaml
 einops
 numpy
+huggingface_hub

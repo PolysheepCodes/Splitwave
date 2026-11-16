@@ -1,0 +1,18 @@
+# Splitwave's built-in Node server as a service (for use behind a reverse proxy that adds HTTPS).
+#   sudo cp server/splitwave.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now splitwave
+[Unit]
+Description=Splitwave web app
+After=network.target
+
+[Service]
+WorkingDirectory=/srv/splitwave
+ExecStart=/usr/bin/node /srv/splitwave/server/serve.mjs
+Environment=PORT=8080
+User=www-data
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

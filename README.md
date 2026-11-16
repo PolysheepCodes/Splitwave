@@ -16,67 +16,116 @@ Measured on an M4 MacBook Air (Chrome) for a 3-minute song: Best takes about 9â€
 separator (python-audio-separator with UtauCover's settings) to within 41â€“63 dB per stem. That's far
 below anything audible; see [Testing](#testing).
 
-## Running it
+## Try it on your computer
+
+You need [Git](https://git-scm.com/downloads) and [Node.js](https://nodejs.org/) 22 or newer.
 
 ```bash
-cd web && npm install && npm run build && cd ..
-node server/serve.mjs                    # http://localhost:8080 (PORT, APP_DIR, MODELS_DIR to change)
+git clone https://github.com/PolysheepCodes/Splitwave.git
+cd Splitwave/web
+npm ci              # installs the build tools into web/node_modules (~250 MB)
+npm run build       # builds the app into web/dist
+cd ..
+node server/serve.mjs
 ```
 
-The `models/` folder holds the four model files and `manifest.json`. They aren't in git: build them with
-[convert/](#the-models) or copy them from another machine.
+Open http://localhost:8080 in Chrome, Edge or Safari. The models download from Hugging Face the first time
+you split a song (see [Where the models come from](#where-the-models-come-from)).
 
-Development: `cd web && npm run dev` (Vite at http://localhost:5173, serves `../models` at `/models`).
+For development, `cd web && npm run dev` starts a live-reloading server at http://localhost:5173.
 
-## Deploying on your server
+## Installing on a server
 
-The server's whole job is to serve two folders: `web/dist/` (the app, ~28 MB) at `/`, and `models/` (~900 MB)
-at `/models/`. Every page needs these headers. They make the page *cross-origin isolated*, which browsers
-require before WebAssembly may use several threads:
+These steps are for a Linux server (Ubuntu or Debian) with a domain name pointing at it. Splitwave is a
+static site: the server only sends files, and all the separation happens in visitors' browsers. Any small
+server works.
 
-```
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
-```
+**1. Install Git, Node.js and nginx** (Node is only needed to build the app):
 
-**Node** (no dependencies; put it behind your reverse proxy for HTTPS): `node server/serve.mjs` already
-sends the headers, supports range requests, and caches models and hashed assets for a year.
-
-**nginx**:
-
-```nginx
-server {
-    server_name splitwave.example.com;
-    root /srv/splitwave/web/dist;
-    add_header Cross-Origin-Opener-Policy same-origin always;
-    add_header Cross-Origin-Embedder-Policy require-corp always;
-    add_header Cross-Origin-Resource-Policy same-origin always;
-    types { application/wasm wasm; }
-
-    location /models/ {
-        alias /srv/splitwave/models/;
-        add_header Cache-Control "public, max-age=31536000, immutable" always;
-        add_header Cross-Origin-Opener-Policy same-origin always;
-        add_header Cross-Origin-Embedder-Policy require-corp always;
-        add_header Cross-Origin-Resource-Policy same-origin always;
-    }
-    location /assets/ {
-        add_header Cache-Control "public, max-age=31536000, immutable" always;
-        add_header Cross-Origin-Opener-Policy same-origin always;
-        add_header Cross-Origin-Embedder-Policy require-corp always;
-        add_header Cross-Origin-Resource-Policy same-origin always;
-    }
-    location = /models/manifest.json { alias /srv/splitwave/models/manifest.json; add_header Cache-Control no-cache always; }
-}
+```bash
+sudo apt update
+sudo apt install -y git nginx
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -   # Node.js 22 from NodeSource
+sudo apt install -y nodejs
+node --version                                                     # v22 or newer
 ```
 
-(nginx doesn't inherit `add_header` into a `location` that sets its own, hence the repetition.) HTTPS is
-required on anything but `localhost`: browsers only allow WebGPU, cross-origin isolation and the file
-storage used for models on secure origins.
+**2. Get Splitwave.** It's installed in `/srv/splitwave` here (the config files below assume that path):
 
-**Bandwidth.** Each new visitor downloads the models once: 120 MB for Fast, 786 MB for Best. After that
-they're kept in the browser (Origin Private File System) and checked against `manifest.json`. A model only
-downloads again if its checksum in the manifest changes.
+```bash
+sudo mkdir -p /srv/splitwave
+sudo chown "$USER" /srv/splitwave
+git clone https://github.com/PolysheepCodes/Splitwave.git /srv/splitwave
+```
+
+**3. Build it:**
+
+```bash
+cd /srv/splitwave/web
+npm ci
+npm run build          # -> /srv/splitwave/web/dist, the folder the web server serves
+```
+
+**4. Serve it with nginx.** [`server/nginx.conf`](server/nginx.conf) has everything set up: the headers
+the app needs, compression and caching. Copy it, put your domain in `server_name`, and enable it:
+
+```bash
+sudo cp /srv/splitwave/server/nginx.conf /etc/nginx/sites-available/splitwave
+sudo nano /etc/nginx/sites-available/splitwave        # change splitwave.example.com to your domain
+sudo ln -s /etc/nginx/sites-available/splitwave /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**5. Turn on HTTPS.** Browsers only allow WebGPU and the in-browser model storage on secure sites:
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d your.domain.example
+```
+
+Done. Open https://your.domain.example.
+
+**Updating** to the latest version:
+
+```bash
+cd /srv/splitwave && git pull
+cd web && npm ci && npm run build      # nginx serves the new files right away
+```
+
+**Other ways to serve it:**
+- **Caddy** instead of nginx gets the HTTPS certificate by itself: [`server/Caddyfile`](server/Caddyfile).
+- **The built-in Node server** (`node server/serve.mjs`, port 8080) behind a reverse proxy you already run.
+  [`server/splitwave.service`](server/splitwave.service) runs it as a systemd service.
+- **Any static host** (Netlify, Cloudflare Pages, a shared host...) works if it can send these two headers
+  on every response. They make the page *cross-origin isolated*, which browsers require before WebAssembly
+  may use several threads:
+  ```
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  ```
+- **No Node.js on the server?** Build on your own computer and copy the result:
+  `rsync -av web/dist/ you@server:/srv/splitwave/web/dist/`.
+
+## Where the models come from
+
+The four model files (906 MB) and their `manifest.json` (sizes and SHA-256 checksums) are hosted on
+Hugging Face. Browsers download them straight from Hugging Face's CDN, so your server never sends them.
+Each visitor downloads a model once: 120 MB for Fast, 786 MB for Best. After that it's kept in the browser
+(Origin Private File System) and checked against the manifest. A model only downloads again if its
+checksum in the manifest changes.
+
+The location is set in [`web/.env`](web/.env) and built into the app:
+
+```
+VITE_MODELS_URL=https://huggingface.co/<user>/<repo>/resolve/main/
+```
+
+To host the models yourself instead, leave `VITE_MODELS_URL` empty and rebuild. Put the `models/` folder
+in `/srv/splitwave/models` and enable the `/models/` block in the nginx config (or set `MODELS_DIR` for
+the Node server).
+
+To publish models to your own Hugging Face repo: `hf auth login`, then
+`python convert/upload_hf.py <user>/<repo>`. That uploads `models/`, the manifest and a model card.
 
 ## How it works
 

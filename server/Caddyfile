@@ -1,0 +1,19 @@
+# Splitwave on Caddy (gets and renews its HTTPS certificate by itself). Put this in /etc/caddy/Caddyfile,
+# change the domain, then: sudo systemctl reload caddy
+splitwave.example.com {
+	root * /srv/splitwave/web/dist
+	file_server
+	encode zstd gzip
+	header {
+		Cross-Origin-Opener-Policy same-origin
+		Cross-Origin-Embedder-Policy require-corp
+		Cross-Origin-Resource-Policy same-origin
+	}
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+	header /index.html Cache-Control no-cache
+	# models on this server instead of Hugging Face:
+	# handle_path /models/* {
+	# 	root * /srv/splitwave/models
+	# 	file_server
+	# }
+}

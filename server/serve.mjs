@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Splitwave's server: serves the built web app and the model files. Nothing is computed here; separation
-// runs in the visitor's browser. No dependencies: `node server/serve.mjs` (PORT, APP_DIR, MODELS_DIR).
+// Splitwave's server: serves the built web app (and the model files, if they're hosted here rather than on
+// Hugging Face). Nothing is computed here; separation runs in the visitor's browser.
+// No dependencies: `node server/serve.mjs` (PORT, APP_DIR, MODELS_DIR).
 //
 // Headers that matter:
 //  - Cross-Origin-Opener-Policy / -Embedder-Policy: make the page "cross-origin isolated", which browsers
@@ -8,6 +9,7 @@
 //  - Range requests + long caching for models: downloads can resume and are fetched once per visitor.
 import { createReadStream, statSync, existsSync } from "node:fs";
 import { createServer } from "node:http";
+import { createGzip } from "node:zlib";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,6 +18,7 @@ const PORT = Number(process.env.PORT || 8080);
 const APP_DIR = resolve(process.env.APP_DIR || join(here, "..", "web", "dist"));
 const MODELS_DIR = resolve(process.env.MODELS_DIR || join(here, "..", "models"));
 
+const COMPRESSIBLE = new Set([".html", ".js", ".mjs", ".css", ".json", ".wasm", ".svg", ".txt", ".webmanifest"]);
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".wasm": "application/wasm",
@@ -61,6 +64,13 @@ createServer((req, res) => {
     res.writeHead(206, { ...headers, "Content-Range": `bytes ${start}-${end}/${size}`, "Content-Length": end - start + 1 });
     if (req.method === "HEAD") return res.end();
     createReadStream(file, { start, end }).pipe(res);
+    return;
+  }
+  // compress text and the WebAssembly engine (28 MB -> ~7 MB); model files barely compress, so they don't
+  if (COMPRESSIBLE.has(extname(file)) && /\bgzip\b/.test(req.headers["accept-encoding"] || "")) {
+    res.writeHead(200, { ...headers, "Content-Encoding": "gzip", Vary: "Accept-Encoding" });
+    if (req.method === "HEAD") return res.end();
+    createReadStream(file).pipe(createGzip({ level: 6 })).pipe(res);
     return;
   }
   res.writeHead(200, { ...headers, "Content-Length": size });

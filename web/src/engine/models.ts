@@ -1,7 +1,8 @@
 /**
- * Model files: downloaded once from the server (models/), checked against the SHA-256 in models/manifest.json,
- * and kept in the browser's Origin Private File System (Cache Storage refuses single entries this large).
- * Stored names start with part of the checksum, so an updated model is never mixed up with an old one.
+ * Model files: downloaded once from MODELS_URL (a Hugging Face repo, or models/ on the app's own server),
+ * checked against the SHA-256 in its manifest.json, and kept in the browser's Origin Private File System
+ * (Cache Storage refuses single entries this large). Stored names start with part of the checksum, so an
+ * updated model is never mixed up with an old one.
  */
 export interface ManifestEntry {
   file: string;
@@ -12,13 +13,23 @@ export type Manifest = Record<string, ManifestEntry>;
 
 const DIR = "splitwave-models";
 const CACHE = "splitwave-models-v1";   // fallback for browsers without OPFS
-const base = () => new URL("models/", self.location.origin + import.meta.env.BASE_URL);
+/**
+ * Where the models live, set at build time in web/.env (VITE_MODELS_URL): e.g.
+ * https://huggingface.co/<user>/<repo>/resolve/main/ (Hugging Face sends the cross-origin headers browsers
+ * need, and the page's isolation headers allow CORS downloads). Empty = models/ on the app's own server.
+ */
+const MODELS_URL = (import.meta.env.VITE_MODELS_URL || "models/").replace(/\/?$/, "/");
+const base = () => new URL(MODELS_URL, self.location.origin + import.meta.env.BASE_URL);
+const get = (url: URL, init: RequestInit = {}) => fetch(url, { mode: "cors", credentials: "omit", ...init });
+
+/** Host name shown in messages ("huggingface.co", or this site). */
+export const modelHost = () => base().host;
 const storedName = (m: ManifestEntry) => `${m.sha256.slice(0, 16)}-${m.file}`;
 
 let manifest: Promise<Manifest> | null = null;
 export function getManifest(): Promise<Manifest> {
-  manifest ??= fetch(new URL("manifest.json", base()), { cache: "no-cache" }).then((r) => {
-    if (!r.ok) throw new Error(`model list unavailable (${r.status})`);
+  manifest ??= get(new URL("manifest.json", base()), { cache: "no-cache" }).then((r) => {
+    if (!r.ok) throw new Error(`model list unavailable from ${base().host} (${r.status})`);
     return r.json();
   });
   return manifest;
@@ -108,8 +119,8 @@ export async function loadModel(id: string, onProgress: (loaded: number, total: 
     onProgress(stored.length, stored.length);
     return stored;
   }
-  const res = await fetch(new URL(m.file, base()));
-  if (!res.ok || !res.body) throw new Error(`couldn't download ${m.file} (${res.status})`);
+  const res = await get(new URL(m.file, base()));
+  if (!res.ok || !res.body) throw new Error(`couldn't download ${m.file} from ${base().host} (${res.status})`);
   const total = m.bytes;
   const buf = new Uint8Array(total);
   const reader = res.body.getReader();

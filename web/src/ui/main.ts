@@ -1,6 +1,6 @@
 /** Splitwave's page: pick a song, choose a quality, watch it separate, listen and download. */
 import { decodeSong, wav16, zip } from "./audio.ts";
-import { getManifest, isCached } from "../engine/models.ts";
+import { getManifest, isCached, modelHost } from "../engine/models.ts";
 import { cpuWorkerCount, spawnCpuWorkers } from "../engine/cpu-workers.ts";
 import { PRESETS, stages, type Preset, type StemName } from "../separate/pipeline.ts";
 import { SAMPLE_RATE, type Stereo } from "../separate/types.ts";
@@ -56,8 +56,10 @@ async function describePresets() {
       const cached = await Promise.all(ids.map(isCached));
       $(`${p}State`).textContent = cached.every(Boolean) ? "downloaded ✓" : cached.some(Boolean) ? "partly downloaded" : "";
     }
+    const host = modelHost() === location.host ? "this site" : modelHost();
+    $("modelNote").textContent = `Models download once from ${host} and stay in your browser for next time.`;
   } catch (e) {
-    showError(`Couldn't read the model list from the server: ${e instanceof Error ? e.message : e}`);
+    showError(`Couldn't read the model list: ${e instanceof Error ? e.message : e}`);
   }
 }
 

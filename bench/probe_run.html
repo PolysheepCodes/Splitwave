@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8"><title>probe run</title><pre id="o">running…</pre>
+<script type="module">
+import * as ort from "./ort/ort.webgpu.bundle.min.mjs";
+const o = document.getElementById("o"); window.__probe = {};
+try {
+  ort.env.wasm.wasmPaths = new URL("./ort/", location.href).href;
+  const model = new Uint8Array(await (await fetch("bs_roformer_probe.onnx")).arrayBuffer());
+  const s = await ort.InferenceSession.create(model, { executionProviders: ["webgpu"] });
+  const x = new Float32Array(await (await fetch("bs_stft_in.f32")).arrayBuffer());
+  const r = await s.run({ stft: new ort.Tensor("float32", x, [1, 2050, 801, 2]) });
+  const probes = s.outputNames.filter(n => n.startsWith("probe")).map(n => [n, r[n].data[0]]);
+  probes.sort((a, b) => parseInt(a[0].slice(5)) - parseInt(b[0].slice(5)));
+  const first = probes.find(([, v]) => !Number.isFinite(v));
+  const big = probes.filter(([, v]) => Number.isFinite(v) && v > 30000).slice(0, 8);
+  const lines = [`probes: ${probes.length}`, `first non-finite: ${first ? first[0] + " = " + first[1] : "none"}`,
+    "before it:", ...(first ? probes.slice(Math.max(0, probes.indexOf(first) - 6), probes.indexOf(first)).map(([n, v]) => `  ${n} = ${v}`) : []),
+    "large finite values:", ...big.map(([n, v]) => `  ${n} = ${v}`)];
+  o.textContent = lines.join("\n"); window.__probe.done = true;
+} catch (e) { o.textContent = "ERROR " + (e.stack || e); window.__probe.done = true; }
+</script>

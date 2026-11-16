@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><title>probe</title><pre id="o">probing…</pre>
+<script type="module">
+const out = {};
+out.crossOriginIsolated = self.crossOriginIsolated;
+out.threads = navigator.hardwareConcurrency;
+out.userAgent = navigator.userAgent;
+out.webgpu = !!navigator.gpu;
+if (navigator.gpu) {
+  const a = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+  if (a) {
+    const info = a.info || {};
+    out.adapter = { vendor: info.vendor, architecture: info.architecture, description: info.description };
+    out.features = [...a.features].filter(f => /shader-f16|timestamp/.test(f));
+    out.limits = { maxBufferSize: a.limits.maxBufferSize / 2**20 + " MB",
+                   maxStorageBufferBindingSize: a.limits.maxStorageBufferBindingSize / 2**20 + " MB",
+                   maxComputeWorkgroupStorageSize: a.limits.maxComputeWorkgroupStorageSize };
+  } else out.adapter = null;
+}
+document.getElementById("o").textContent = JSON.stringify(out, null, 2);
+window.__probe = out;
+</script>

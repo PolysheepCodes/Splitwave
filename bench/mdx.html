@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><title>mdx</title><pre id="o">starting…</pre>
+<script type="module">
+import * as ort from "./ort/ort.webgpu.bundle.min.mjs";
+const o = document.getElementById("o"), log = (s) => { o.textContent += "\n" + s; }; const res = {}; window.__bench = res;
+const ep = new URLSearchParams(location.search).get("ep") || "webgpu";
+try {
+  ort.env.wasm.wasmPaths = new URL("./ort/", location.href).href; ort.env.wasm.numThreads = navigator.hardwareConcurrency;
+  const s = await ort.InferenceSession.create(new Uint8Array(await (await fetch("mdx_voc_ft.onnx")).arrayBuffer()), { executionProviders: [ep] });
+  const x = new Float32Array(await (await fetch("mdx_in.f32")).arrayBuffer()), ref = new Float32Array(await (await fetch("mdx_ref.f32")).arrayBuffer());
+  const feed = { input: new ort.Tensor("float32", x, [1, 4, 3072, 256]) };
+  for (let i = 0; i < 3; i++) {
+    const t = performance.now(); const r = await s.run(feed); const dt = (performance.now() - t) / 1000;
+    if (i === 0) { let se = 0, ss = 0; const y = r.output.data; for (let k = 0; k < y.length; k++) { se += (y[k]-ref[k])**2; ss += ref[k]**2; } log(`vs onnxruntime CPU: SNR ${(10*Math.log10(ss/se)).toFixed(1)} dB`); }
+    log(`${ep} run ${i+1}: ${dt.toFixed(2)} s per segment (~6 s of audio)`);
+  }
+  res.ok = true;
+} catch (e) { res.error = String(e); log("ERROR " + (e.stack || e)); }
+</script>

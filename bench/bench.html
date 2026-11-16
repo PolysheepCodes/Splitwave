@@ -1,0 +1,42 @@
+<!doctype html><meta charset="utf-8"><title>bench</title><pre id="o">starting…</pre>
+<script type="module">
+import * as ort from "./ort/ort.webgpu.bundle.min.mjs";
+const o = document.getElementById("o"), log = (s) => { o.textContent += "\n" + s; };
+const res = {}; window.__bench = res;
+const q = new URLSearchParams(location.search); const ep = q.get("ep") || "webgpu"; const kind = q.get("model") || "bs"; const prec = q.get("prec") || "fp16";
+try {
+  ort.env.wasm.wasmPaths = new URL("./ort/", location.href).href;
+  ort.env.wasm.numThreads = navigator.hardwareConcurrency;
+  let t = performance.now();
+  const model = new Uint8Array(await (await fetch(`${kind}_roformer_${prec}.onnx`)).arrayBuffer());
+  log(`model fetched ${(model.length/1e6).toFixed(0)} MB in ${((performance.now()-t)/1000).toFixed(1)} s`);
+  t = performance.now();
+  const s = await ort.InferenceSession.create(model, { executionProviders: [ep], graphOptimizationLevel: "all" });
+  res.load_s = (performance.now() - t) / 1000; log(`session (${ep}) ready in ${res.load_s.toFixed(1)} s`);
+  const x = new Float32Array(await (await fetch(`${kind}_stft_in.f32`)).arrayBuffer());
+  const ref = new Float32Array(await (await fetch(`${kind}_mask_ref.f32`)).arrayBuffer());
+  const feed = { stft: new ort.Tensor("float32", x, [1, 2050, 801, 2]) };
+  const runs = [];
+  for (let i = 0; i < 3; i++) {
+    t = performance.now(); const r = await s.run(feed); runs.push((performance.now() - t) / 1000);
+    if (i === 0) {
+      const y = r.mask.data; let maxd = 0, se = 0, ss = 0, nan = 0; for (let k = 0; k < y.length; k++) if (Number.isNaN(y[k])) nan++; log(`NaN values: ${nan} of ${y.length}`);
+      for (let k = 0; k < y.length; k++) { const d = y[k] - ref[k]; maxd = Math.max(maxd, Math.abs(d)); se += d*d; ss += ref[k]*ref[k]; }
+      res.max_abs_diff = maxd; res.mask_snr_db = 10 * Math.log10(ss / se);
+      // what you hear: the separated spectrum X*mask, PyTorch's vs this run's
+      let sig = 0, err = 0;
+      for (let k = 0; k < y.length; k += 2) {
+        const xr = x[k], xi = x[k+1];
+        const rr = xr*ref[k] - xi*ref[k+1], ri = xr*ref[k+1] + xi*ref[k];
+        const yr = xr*y[k] - xi*y[k+1], yi = xr*y[k+1] + xi*y[k];
+        sig += rr*rr + ri*ri; err += (rr-yr)**2 + (ri-yi)**2;
+      }
+      res.vocals_snr_db = 10 * Math.log10(sig / err);
+      log(`separated vocals vs PyTorch's: SNR ${res.vocals_snr_db.toFixed(1)} dB`);
+      log(`vs PyTorch: max abs diff ${maxd.toFixed(4)}, mask SNR ${res.mask_snr_db.toFixed(1)} dB`);
+    }
+    log(`run ${i+1}: ${runs[i].toFixed(2)} s per 8 s chunk`);
+  }
+  res.runs = runs; res.ok = true; log("done");
+} catch (e) { res.error = String(e && e.stack || e); log("ERROR " + res.error); }
+</script>

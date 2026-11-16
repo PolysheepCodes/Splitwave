@@ -109,7 +109,8 @@ cd web && npm ci && npm run build      # nginx serves the new files right away
 ## Where the models come from
 
 The four model files (906 MB) and their `manifest.json` (sizes and SHA-256 checksums) are hosted on
-Hugging Face. Browsers download them straight from Hugging Face's CDN, so your server never sends them.
+Hugging Face at [TheDailyOWO/splitwave-models](https://huggingface.co/TheDailyOWO/splitwave-models).
+Browsers download them straight from Hugging Face's CDN, so your server never sends them.
 Each visitor downloads a model once: 120 MB for Fast, 786 MB for Best. After that it's kept in the browser
 (Origin Private File System) and checked against the manifest. A model only downloads again if its
 checksum in the manifest changes.
@@ -117,7 +118,7 @@ checksum in the manifest changes.
 The location is set in [`web/.env`](web/.env) and built into the app:
 
 ```
-VITE_MODELS_URL=https://huggingface.co/<user>/<repo>/resolve/main/
+VITE_MODELS_URL=https://huggingface.co/TheDailyOWO/splitwave-models/resolve/main/
 ```
 
 To host the models yourself instead, leave `VITE_MODELS_URL` empty and rebuild. Put the `models/` folder

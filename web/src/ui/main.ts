@@ -27,23 +27,32 @@ async function detectDevice() {
   const gpu = (navigator as Navigator & { gpu?: { requestAdapter(o?: object): Promise<unknown> } }).gpu;
   // ?cpu forces the CPU backend (for comparing, or when a graphics driver misbehaves)
   const forceCpu = new URLSearchParams(location.search).has("cpu");
-  try { webgpu = !forceCpu && !!(gpu && (await gpu.requestAdapter({ powerPreference: "high-performance" }))); } catch { webgpu = false; }
+  let adapter = false;
+  try { adapter = !!(gpu && (await gpu.requestAdapter({ powerPreference: "high-performance" }))); } catch { adapter = false; }
+  webgpu = !forceCpu && adapter;
   const note = $("device");
   if (webgpu) {
     note.textContent = "Separation runs on your graphics card (WebGPU).";
+    return;
+  }
+  note.classList.add("warn");
+  const fallback = " Separation runs on the CPU instead (slower), and only Fast quality is available.";
+  if (forceCpu) {
+    note.textContent = "Running on the CPU (?cpu in the address). Only Fast quality is available.";
+  } else if (!isSecureContext) {
+    // the most common setup mistake: browsers switch WebGPU off on pages that aren't HTTPS
+    note.textContent = `This page was opened over plain http://, and browsers only allow WebGPU on secure (https://) ` +
+      `pages.${fallback} Open https://${location.host}${location.pathname} instead` +
+      ` (the site needs an HTTPS certificate; see the README).`;
+  } else if (!gpu) {
+    note.textContent = "This browser has no WebGPU." + fallback +
+      " For Best quality use a current Chrome or Edge (Windows, macOS, ChromeOS), or Safari 26 or newer.";
   } else {
-    note.classList.add("warn");
-    note.textContent = forceCpu
-      ? "Running on the CPU (?cpu in the address). Only Fast quality is available."
-      : "This browser has no WebGPU, so separation runs on the CPU (slower) and only Fast quality is available. " +
-        "For Best quality use a current Chrome, Edge or Safari.";
-    const best = document.querySelector<HTMLInputElement>('input[value="best"]')!;
-    best.disabled = true;
-    document.querySelector<HTMLInputElement>('input[value="fast"]')!.checked = true;
+    note.textContent = "This browser supports WebGPU but couldn't use your graphics card (it may be turned off, " +
+      "or the driver blocked; in Chrome see chrome://gpu)." + fallback;
   }
-  if (!crossOriginIsolated && !webgpu) {
-    note.textContent += " (The server isn't sending the headers that let it use more than one CPU core.)";
-  }
+  document.querySelector<HTMLInputElement>('input[value="best"]')!.disabled = true;
+  document.querySelector<HTMLInputElement>('input[value="fast"]')!.checked = true;
 }
 
 async function describePresets() {

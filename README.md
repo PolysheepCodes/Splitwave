@@ -1,5 +1,7 @@
 # Splitwave
 
+Try it now! https://splitwave.thedailyowo.win
+
 Split a song into **vocals** and **instrumental**, then the vocals into **lead** and **backing vocals**, in
 the browser. The separation runs on the visitor's own graphics card (WebGPU) or processor (WebAssembly).
 The server only hands out static files, and songs are never uploaded.

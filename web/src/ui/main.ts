@@ -331,7 +331,26 @@ function wireResult() {
   requestAnimationFrame(tick);
 }
 
+// ------------------------------------------------------------------------------------------ donation banner
+const DONATE_URL = import.meta.env.VITE_DONATE_URL || "";
+const DONATE_KEY = "splitwave.donate.hiddenAt";
+const DONATE_HIDE_DAYS = 30;   // after "×", the banner stays away this long
+
+function setupDonate() {
+  if (!/^https:\/\//.test(DONATE_URL)) return;
+  let hiddenAt = 0;
+  try { hiddenAt = Number(localStorage.getItem(DONATE_KEY)) || 0; } catch { /* storage blocked: just show it */ }
+  if (Date.now() - hiddenAt < DONATE_HIDE_DAYS * 86_400_000) return;
+  $<HTMLAnchorElement>("donateLink").href = DONATE_URL;
+  $("donate").classList.remove("hidden");
+  $("donateClose").addEventListener("click", () => {
+    $("donate").classList.add("hidden");
+    try { localStorage.setItem(DONATE_KEY, String(Date.now())); } catch { /* fine: hidden for this visit */ }
+  });
+}
+
 // ------------------------------------------------------------------------------------------ go
+setupDonate();
 wireDrop();
 wireResult();
 $("go").addEventListener("click", start);

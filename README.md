@@ -123,6 +123,9 @@ The location is set in [`web/.env`](web/.env) and built into the app:
 VITE_MODELS_URL=https://huggingface.co/TheDailyOWO/splitwave-models/resolve/main/
 ```
 
+The same file sets the donation banner at the top of the page (`VITE_DONATE_URL`, a Buy Me a Coffee
+link). Leave it empty for no banner. Visitors can hide it with ×, and it stays hidden for 30 days.
+
 To host the models yourself instead, leave `VITE_MODELS_URL` empty and rebuild. Put the `models/` folder
 in `/srv/splitwave/models` and enable the `/models/` block in the nginx config (or set `MODELS_DIR` for
 the Node server).
